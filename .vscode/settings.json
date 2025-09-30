@@ -1,0 +1,10 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": ".*",
+        "cmd": "cd src/frontend && npm run build"
+      }
+    ]
+  }
+}

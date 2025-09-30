@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Psalms to Music</title>
+  </head>
+  <body>
+    <div id="app">
+      <h2>Psalms To Music</h2>
+      <p>
+        This app searches for combinations of syllables that match an existing
+        tune, allowing you to reuse tunes on new psalms, hymns, or spiritual
+        songs.
+      </p>
+      <h3>Search Through:</h3>
+      <input type="radio" id="bible" name="searchType" value="Bible" checked />
+      <label for="bible">Bible</label>
+      <input type="radio" id="hymns" name="searchType" value="Hymns" />
+      <label for="hymns">Hymns</label>
+      <input type="radio" id="songs" name="searchType" value="Songs" />
+      <label for="songs">Songs</label>
+      <br />
+      <button id="searchButton">Search</button>
+      <button id="clearButton">Clear</button>
+      <br />
+      <input type="text" id="searchText" placeholder="Enter search term" />
+      <div id="results">
+        <p>Results will appear here.</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
