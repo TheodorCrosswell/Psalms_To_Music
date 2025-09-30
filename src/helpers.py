@@ -16,7 +16,12 @@ hyphen_gb = pyphen.Pyphen(lang="en_GB")
 hyphen_us = pyphen.Pyphen(lang="en_US")
 
 
-def get_all_kjv_words(kjv_path: str = "../data/kjv.txt") -> list[str]:
+def get_clean_text(text: str):
+    clean_kjv_text = re.sub(r"[.,:;'()?!|0-9]", "", text)
+    return clean_kjv_text
+
+
+def get_all_kjv_words_unique(kjv_path: str = "../data/kjv.txt") -> list[str]:
     """- Input:
        - kjv_path: the path to kjv.txt, a file with text from all the verses in the KJV Bible concatenated into one text.
     - Output:
@@ -25,7 +30,7 @@ def get_all_kjv_words(kjv_path: str = "../data/kjv.txt") -> list[str]:
     with open(kjv_path, "r") as file:
         kjv_text = file.read()
 
-    clean_kjv_text = re.sub(r"[.,:;'()?!|]", "", kjv_text)
+    clean_kjv_text = get_clean_text(kjv_text)
 
     all_kjv_words = set()
 
@@ -33,6 +38,26 @@ def get_all_kjv_words(kjv_path: str = "../data/kjv.txt") -> list[str]:
         all_kjv_words.add(word)
 
     all_kjv_words = list(all_kjv_words)
+    return all_kjv_words
+
+
+def get_all_kjv_words(kjv_path: str = "../data/kjv.txt") -> list[str]:
+    """- Input:
+       - kjv_path: the path to kjv.txt, a file with text from all the verses in the KJV Bible concatenated into one text.
+    - Output:
+       - all_kjv_words: a list of all the words found in the KJV Bible. Should be 789627, with this dataset.
+       Online, it says that the word count for the KJV is 790k - 830k (7^7), but that huge variation must be due to counting variation.
+    """
+    with open(kjv_path, "r") as file:
+        kjv_text = file.read()
+
+    clean_kjv_text = get_clean_text(kjv_text)
+
+    all_kjv_words = []
+
+    for word in clean_kjv_text.split():
+        all_kjv_words.append(word)
+
     return all_kjv_words
 
 
