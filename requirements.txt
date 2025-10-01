@@ -1,4 +1,5 @@
 ntlk
-polars
 pyphen
-syllable
+fastapi
+uvicorn
+rapidfuzz

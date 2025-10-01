@@ -1,7 +1,5 @@
-import polars as pl
 from nltk.corpus import cmudict
 import re
-from pprint import pprint
 import pyphen
 from rapidfuzz import fuzz, process
 
@@ -21,8 +19,47 @@ def get_clean_text(text: str) -> str:
     """
     Removes the punctuation marks from the text.
     """
-    clean_kjv_text = re.sub(r"""[.,:;'"’`()?!|0-9]+""", "", text)
-    return clean_kjv_text
+    clean_text = re.sub(r"[^\w\s]", "", text)
+    return clean_text
+
+
+def validate_words_syllables_search_parameters(
+    words_long: list[str],
+    words_short: list[str],
+    syllables_long: str,
+    syllables_short: str,
+    index: int = 0,
+) -> None:
+    """
+    Performs a series of checks on these parameters.
+
+    To pass, they must meet these requirements:
+    - len(words_long) == len(syllables_long)
+    - len(words_short) == len(syllables_short)
+    - len(words_long) >= len(words_short)
+    - len(syllables_long) >= len(syllables_short)
+    - index + len(words_short) <= len(words_long)
+    """
+    if len(words_long) != len(syllables_long):
+        raise ValueError(
+            f"Length mismatch. Must be equal: len(words_long) = {len(words_long)}, len(syllables_long) = {len(syllables_long)}"
+        )
+    elif len(words_short) != len(syllables_short):
+        raise ValueError(
+            f"Length mismatch. Must be equal: len(words_short) = {len(words_short)}, len(syllables_short) = {len(syllables_short)}"
+        )
+    elif len(words_long) < len(words_short):
+        raise ValueError(
+            f"Length mismatch. len(words_long) must be >= len(words_short): len(words_long) = {len(words_long)}, len(words_short) = {len(words_short)}"
+        )
+    elif len(syllables_long) < len(syllables_short):
+        raise ValueError(
+            f"Length mismatch. len(syllables_long) must be >= len(syllables_short): len(syllables_long) = {len(syllables_long)}, len(syllables_short) = {len(syllables_short)}"
+        )
+    elif index + len(words_short) > len(words_long):
+        raise ValueError(
+            f"Length mismatch. index + len(words_short)  must be <= len(words_long): index = {index}, len(words_long) = {len(words_long)}, len(words_short) = {len(words_short)}"
+        )
 
 
 def get_all_kjv_words_unique(kjv_path: str = "../data/kjv.txt") -> list[str]:
@@ -245,6 +282,45 @@ def get_syllable_count(word: str) -> int:
     return syllable_count
 
 
+def hyphenate_word(
+    word: str, syllable_count: int | str, hyphenator: pyphen.Pyphen = hyphen_gb
+):
+    """
+    Hyphenates a word based on a given syllable count.
+    It first tries to use the Pyphen library. If the result does not match the
+    syllable_count, it falls back to a method that divides the word into
+    roughly equal parts.
+    """
+    # Arbitrary decision: use Pyphen(lang="en_GB") as opposed to "en_US"
+    # Let Pyphen attempt to hyphenate the word first.
+    hyphenated_word = hyphenator.inserted(word)
+
+    syllable_count = int(syllable_count)
+
+    # Check if Pyphen's hyphenation matches the desired syllable count.
+    # The number of hyphens should be one less than the number of syllables.
+    if hyphenated_word.count("-") == syllable_count - 1:
+        return hyphenated_word
+    else:
+        # If Pyphen's output is not correct, use a fallback method.
+        # For a single syllable word, no hyphens are needed.
+        if syllable_count <= 1:
+            return word
+
+        word_len = len(word)
+        step = word_len / syllable_count
+
+        parts = []
+        last_cut = 0
+        for i in range(1, syllable_count):
+            # Calculate the position for the next hyphen.
+            cut = round(i * step)
+            parts.append(word[last_cut:cut])
+            last_cut = cut
+        parts.append(word[last_cut:])
+        return "-".join(parts)
+
+
 def text_to_syllables_str(text: str) -> str:
     """
     Converts a text to a syllable count string
@@ -255,6 +331,18 @@ def text_to_syllables_str(text: str) -> str:
     words = clean_text.split()
     syllables_str = "".join([str(get_syllable_count(word)) for word in words])
     return syllables_str
+
+
+def text_to_words_syllables_str(text: str) -> tuple[list[str], str]:
+    """
+    Converts a text to a syllable count string
+    - e.g. "In the beginning God created the heaven and the earth" -> '1132111111'
+    - In: 1 the: 1 beginning: 3 God: 1 created: 3 the: 1 heaven: 2 and: 1 the: 1 earth: 1
+    """
+    clean_text = get_clean_text(text)
+    words = clean_text.split()
+    syllables_str = "".join([str(get_syllable_count(word)) for word in words])
+    return words, syllables_str
 
 
 def get_exact_matches(main_syllables: str, search_syllables: str) -> list[int]:
@@ -343,12 +431,67 @@ def get_fuzzy_matches(
     full_length = len(kjv_syllables_str)
     result = process.extract(
         query=search_syllables_str,
-        choices=[
+        choices=(
             kjv_syllables_str[i : i + search_length]
             for i in range(0, full_length - search_length + 1, step)
-        ],
+        ),
         scorer=fuzz.ratio,
         limit=None,
         score_cutoff=score_cutoff,
     )
     return result
+
+
+def match_results_to_text(
+    words_long: list[str],
+    words_short: list[str],
+    syllables_long: str,
+    syllables_short: str,
+    index: int = 0,
+    hyphenator: pyphen.Pyphen = hyphen_gb,
+) -> str:
+    """
+    - Input:
+        - words_long: long list of words
+            - e.g. ['In', 'the', 'beginning', 'God', 'created'], (...), ['be', 'with', 'you', 'all', 'Amen']
+        - words_short: short list of words
+            - e.g. ['But', 'I', 'know', 'whom', 'I', 'have', 'believed', 'and', 'am', 'persuaded']
+        - syllables_long: string, each digit is the number of syllables in the correspoding word
+            - e.g. "11313" + (...) + "11112"
+        - syllables_short: string, each digit is the number of syllables in the correspoding word
+            - e.g. "1111112113"
+        - index: int, the index of the match in words_long/syllables_long
+            - e.g. 757980
+        - hyphenator: pyphen.Pyphen = hyphen_gb,
+            - e.g. pyphen.Pyphen(lang="en_GB")
+    - Output:
+        - output_string: string
+            - e.g. (you have to open this file to see it properly)
+
+                   I                Ive       / 1   1
+                 have       X   com-mit-ted   / 1 X 3
+              com-mit-ted   X      un-to      / 3 X 2
+                 un-to      X       him       / 2 X 1
+                  him       X    agai-nst     / 1 X 2
+               agai-nst     X      that       / 2 X 1
+                  that              day       / 1   1
+
+    """
+    validate_words_syllables_search_parameters(
+        words_long, words_short, syllables_long, syllables_short
+    )
+    output_string = ""
+    for i in range(len(words_short)):
+        word_long = words_long[index + i]
+        word_short = words_short[i]
+        syllable_long = syllables_long[index + i]
+        syllable_short = syllables_short[i]
+        if syllable_long != "1":
+            word_long = hyphenate_word(word_long, syllable_long, hyphenator)
+        if syllable_short != "1":
+            word_short = hyphenate_word(word_short, syllable_short, hyphenator)
+        indicator = " "
+        if syllable_long != syllable_short:
+            indicator = "X"
+        output_string += f"{word_long:^15} {indicator} {word_short:^15} / {syllable_long} {indicator} {syllable_short}\n"
+    return output_string
