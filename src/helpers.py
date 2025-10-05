@@ -15,6 +15,7 @@ hyphen_gb = pyphen.Pyphen(lang="en_GB")
 hyphen_us = pyphen.Pyphen(lang="en_US")
 
 
+# TODO: synchronize this and the cleaning that occours in WordSyllable (disorganized)
 def get_clean_text(text: str) -> str:
     """
     Lowercases the text, removes the punctuation marks, but preserves apostrophes
@@ -43,19 +44,6 @@ def get_clean_text(text: str) -> str:
 def get_words(clean_text: str) -> list[str]:
     words = clean_text.split()
     return words
-
-
-def get_syllables(words: list[str]) -> list[tuple[int, ...]]:
-    syllables = []
-    for word in words:
-        syllable_counts = get_syllable_counts(word)
-        syllables.append(syllable_counts)
-    return syllables
-
-
-# # Don't use this. Use WordsSyllables(text="example text") instead.
-# def get_WordsSyllables(text: str) -> WordsSyllables:
-#     return WordsSyllables(text=text)
 
 
 # TODO: convert it to return tuples of all syllable pronunciation options.
@@ -219,7 +207,7 @@ def get_syllable_count(input_word: str) -> int:
 # TODO: implement this in a function with syllable counting, to avoid hyphenating the same word twice
 def hyphenate_word(
     word: str, syllable_count: int | str, hyphenator: pyphen.Pyphen = hyphen_gb
-):
+) -> str:
     """
     Hyphenates a word based on a given syllable count.
     It first tries to use the Pyphen library. If the result does not match the
@@ -253,7 +241,8 @@ def hyphenate_word(
             parts.append(word[last_cut:cut])
             last_cut = cut
         parts.append(word[last_cut:])
-        return "-".join(parts)
+        full_word = "-".join(parts)
+        return full_word
 
 
 get_word_options_general_rules = {
@@ -267,6 +256,8 @@ get_word_options_general_rules = {
     "y'all": " you all",
 }
 get_word_options_specific_cases = {
+    "boutta": ("about to",),
+    "aboutta": ("about to",),
     "ain't": ("am not", "is not", "are not", "has not", "have not"),
     "can't": ("cannot",),
     "he'd": ("he would", "he had"),
@@ -332,162 +323,40 @@ get_word_options_specific_cases = {
     "e'en": ("even",),
 }
 
+# TODO: deprecate. Not sure that this will ever get used vs. just using WordsSyllables("string")
+# def get_word_options(word: str) -> tuple[str, ...]:
+#     """Expands contractions and common slang in a given word.
 
-def get_word_options(word: str) -> tuple[str, ...]:
-    """Expands contractions and common slang in a given word.
+#     This function takes a word and returns a tuple of possible
+#     expansions. It handles common English contractions and some informal
+#     slang words.
 
-    This function takes a word and returns a tuple of possible
-    expansions. It handles common English contractions and some informal
-    slang words.
+#     Input:
+#         - clean_word: A single word, without spaces.
+#             - e.g. "y'all'd"
 
-    Input:
-        - clean_word: A single word, without spaces.
-            - e.g. "y'all'd"
+#     Output:
+#         - A tuple[str, ...] containing the original word and its possible
+#         expansions.
+#             - e.g. "you all would"
+#     """
+#     clean_word = word.lower()
+#     word_options = set((clean_word,))
+#     word_options.update(
+#         get_word_options_specific_cases.get(
+#             clean_word,
+#             get_word_options_specific_cases.get(
+#                 clean_word.replace("'", ""),
+#                 (),
+#             ),
+#         )
+#     )
 
-    Output:
-        - A tuple[str, ...] containing the original word and its possible
-        expansions.
-            - e.g. "you all would"
-    """
-    clean_word = word.lower()
-    word_options = set((clean_word,))
-    word_options.update(
-        get_word_options_specific_cases.get(
-            clean_word,
-            get_word_options_specific_cases.get(
-                clean_word.replace("'", ""),
-                (),
-            ),
-        )
-    )
-
-    for ending, changed_ending in get_word_options_general_rules.items():
-        word_options_tuple = tuple(word_options)
-        for word_option in word_options_tuple:
-            word_options.add(word_option.replace(ending, changed_ending).strip())
-    return tuple(word_options)
-
-
-# TODO: make this get the syllable count at the same time and hyphenate the words
-def get_WordSyllable_options(word: str) -> tuple[str, ...]:
-    """Expands contractions and common slang in a given word.
-
-    This function takes a word and returns a tuple of possible
-    expansions. It handles common English contractions and some informal
-    slang words.
-
-    Input:
-        - clean_word: A single word, without spaces.
-            - e.g. "y'all'd"
-
-    Output:
-        - A tuple[str, ...] containing the original word and its possible
-        expansions.
-            - e.g. "you all would"
-    """
-    clean_word = word.lower()
-    word_options = set((clean_word,))
-    word_options.update(
-        get_word_options_specific_cases.get(
-            clean_word,
-            get_word_options_specific_cases.get(
-                clean_word.replace("'", ""),
-                (),
-            ),
-        )
-    )
-
-    for ending, changed_ending in get_word_options_general_rules.items():
-        word_options_tuple = tuple(word_options)
-        for word_option in word_options_tuple:
-            word_options.add(word_option.replace(ending, changed_ending).strip())
-    return tuple(word_options)
-
-
-# TODO: deprecate this. I do not need just the syllables, so this is not useful.
-def text_to_syllables_str(text: str) -> str:
-    """
-    Converts a text to a syllable count string
-    - e.g. "In the beginning God created the heaven and the earth" -> '1132111111'
-    - In: 1 the: 1 beginning: 3 God: 1 created: 3 the: 1 heaven: 2 and: 1 the: 1 earth: 1
-    """
-    clean_text = get_clean_text(text)
-    words = clean_text.split()
-    syllables_str = "".join([str(get_syllable_count(word)) for word in words])
-    return syllables_str
-
-
-# TODO: deprecate this. Use a WordsSyllables class instead.
-#  e.g. WordsSyllables.__init__(text: str)
-def text_to_words_syllables_str(text: str) -> tuple[list[str], str]:
-    """
-    Converts a text to a syllable count string
-    - e.g. "In the beginning God created the heaven and the earth" -> '1132111111'
-    - In: 1 the: 1 beginning: 3 God: 1 created: 3 the: 1 heaven: 2 and: 1 the: 1 earth: 1
-    """
-    clean_text = get_clean_text(text)
-    words = clean_text.split()
-    syllables_str = "".join([str(get_syllable_count(word)) for word in words])
-    return words, syllables_str
-
-
-# TODO: deprecate this. This is probably useless
-def get_exact_matches(main_syllables: str, search_syllables: str) -> list[int]:
-    """
-    Gets the locations of all exact matches by iteratively
-    comparing each element of search_syllables to the elements
-    in main_syllables, skipping the rest of the check if a mismatch is found.
-
-    Accepts input as:
-    - "1132111111" (str)
-    """
-    match_locations = []
-    for i in range(0, len(main_syllables)):
-        match_flag = True
-        for j in range(0, len(search_syllables)):
-            # Not a match, break out of the loop and skip checking the rest for this position.
-            if main_syllables[i + j] != search_syllables[j]:
-                match_flag = False
-                break
-        if match_flag:
-            match_locations.append(i)
-    return match_locations
-
-
-# TODO: deprecate this. This is probably useless
-def get_exact_matches_optimized(
-    main_syllables: str, search_syllables: str
-) -> list[int]:
-    """
-    Gets the locations of all exact matches by iteratively
-    comparing each element of search_syllables to the elements
-    in main_syllables, skipping the rest of the check if a mismatch is found.
-
-    Optimization: Finds the max value of search_syllables, then searches for that max value,
-    and facilitates a faster search, because the max value is rarer than 1s or 2s
-
-    In testing, this optimization resulted in 100% speedup vs non-optimized version: 0.16s -> 0.08s
-
-    Accepts input as:
-    - "1132111111" (str)
-    """
-    match_locations = []
-    peak = max(search_syllables)
-    peak_index = search_syllables.index(peak)
-    for i in range(0, len(main_syllables)):
-        if i + peak_index > len(main_syllables) - 1:
-            break
-        elif main_syllables[i + peak_index] != peak:
-            continue
-        match_flag = True
-        for j in range(0, len(search_syllables)):
-            # Not a match, break out of the loop and skip checking the rest for this position.
-            if main_syllables[i + j] != search_syllables[j]:
-                match_flag = False
-                break
-        if match_flag:
-            match_locations.append(i)
-    return match_locations
+#     for ending, changed_ending in get_word_options_general_rules.items():
+#         word_options_tuple = tuple(word_options)
+#         for word_option in word_options_tuple:
+#             word_options.add(word_option.replace(ending, changed_ending).strip())
+#     return tuple(word_options)
 
 
 def get_fuzzy_matches(
@@ -528,119 +397,3 @@ def get_fuzzy_matches(
         score_cutoff=score_cutoff,
     )
     return result
-
-
-# TODO: deprecate. Outputting the results to text is a bad idea. It should return an object instead.
-def match_results_to_text(
-    words_long: list[str],
-    words_short: list[str],
-    syllables_long: str,
-    syllables_short: str,
-    index: int = 0,
-    hyphenator: pyphen.Pyphen = hyphen_gb,
-) -> str:
-    """
-    - Input:
-        - words_long: long list of words
-            - e.g. ['In', 'the', 'beginning', 'God', 'created'], (...), ['be', 'with', 'you', 'all', 'Amen']
-        - words_short: short list of words
-            - e.g. ['But', 'I', 'know', 'whom', 'I', 'have', 'believed', 'and', 'am', 'persuaded']
-        - syllables_long: string, each digit is the number of syllables in the correspoding word
-            - e.g. "11313" + (...) + "11112"
-        - syllables_short: string, each digit is the number of syllables in the correspoding word
-            - e.g. "1111112113"
-        - index: int, the index of the match in words_long/syllables_long
-            - e.g. 757980
-        - hyphenator: pyphen.Pyphen = hyphen_gb,
-            - e.g. pyphen.Pyphen(lang="en_GB")
-    - Output:
-        - output_string: string
-            - e.g. (you have to open this file to see it properly)
-
-                   I                Ive       / 1   1
-                 have       X   com-mit-ted   / 1 X 3
-              com-mit-ted   X      un-to      / 3 X 2
-                 un-to      X       him       / 2 X 1
-                  him       X    agai-nst     / 1 X 2
-               agai-nst     X      that       / 2 X 1
-                  that              day       / 1   1
-
-    """
-    validate_words_syllables_search_parameters(
-        words_long, words_short, syllables_long, syllables_short
-    )
-    output_string = ""
-    for i in range(len(words_short)):
-        word_long = words_long[index + i]
-        word_short = words_short[i]
-        syllable_long = syllables_long[index + i]
-        syllable_short = syllables_short[i]
-        if syllable_long != "1":
-            word_long = hyphenate_word(word_long, syllable_long, hyphenator)
-        if syllable_short != "1":
-            word_short = hyphenate_word(word_short, syllable_short, hyphenator)
-        indicator = " "
-        if syllable_long != syllable_short:
-            indicator = "X"
-        output_string += f"{word_long:^15} {indicator} {word_short:^15} / {syllable_long} {indicator} {syllable_short}\n"
-    return output_string
-
-
-# # TODO: make this return a pythonic object, not JSON.
-# def match_results_to_json(
-#     words_long: list[str],
-#     words_short: list[str],
-#     syllables_long: str,
-#     syllables_short: str,
-#     index: int = 0,
-#     hyphenator: pyphen.Pyphen = hyphen_gb,
-# ) -> list[WordDetail]:
-#     """
-#     - Input:
-#         - words_long: long list of words
-#             - e.g. ['In', 'the', 'beginning', 'God', 'created'], (...), ['be', 'with', 'you', 'all', 'Amen']
-#         - words_short: short list of words
-#             - e.g. ['But', 'I', 'know', 'whom', 'I', 'have', 'believed', 'and', 'am', 'persuaded']
-#         - syllables_long: string, each digit is the number of syllables in the correspoding word
-#             - e.g. "11313" + (...) + "11112"
-#         - syllables_short: string, each digit is the number of syllables in the correspoding word
-#             - e.g. "1111112113"
-#         - index: int, the index of the match in words_long/syllables_long
-#             - e.g. 757980
-#         - hyphenator: pyphen.Pyphen = hyphen_gb,
-#             - e.g. pyphen.Pyphen(lang="en_GB")
-#     - Output:
-#         - output_string: string
-#             - e.g. (you have to open this file to see it properly)
-
-#                    I                Ive       / 1   1
-#                  have       X   com-mit-ted   / 1 X 3
-#               com-mit-ted   X      un-to      / 3 X 2
-#                  un-to      X       him       / 2 X 1
-#                   him       X    agai-nst     / 1 X 2
-#                agai-nst     X      that       / 2 X 1
-#                   that              day       / 1   1
-
-#     """
-#     validate_words_syllables_search_parameters(
-#         words_long, words_short, syllables_long, syllables_short
-#     )
-#     output = []
-#     for i in range(len(words_short)):
-#         word_long = words_long[index + i]
-#         word_short = words_short[i]
-#         syllable_long = syllables_long[index + i]
-#         syllable_short = syllables_short[i]
-#         if syllable_long != "1":
-#             word_long = hyphenate_word(word_long, syllable_long, hyphenator)
-#         if syllable_short != "1":
-#             word_short = hyphenate_word(word_short, syllable_short, hyphenator)
-#         output.append(
-#             {
-#                 "word_long": word_long,
-#                 "word_short": word_short,
-#                 "syllable_long": syllable_long,
-#                 "syllable_short": syllable_short,
-#             }
-#         )
-#     return output
