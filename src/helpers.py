@@ -46,6 +46,11 @@ def get_words(clean_text: str) -> list[str]:
     return words
 
 
+def get_syllables(words: list[str]) -> str:
+    syllables = "".join([str(get_syllable_count(word)) for word in words])
+    return syllables
+
+
 # TODO: convert it to return tuples of all syllable pronunciation options.
 # e.g. "I've" -> (1,2), because it can be pronounced as either "I've" or as "I have"
 def count_syllables_cmudict_shallow(word: str, pronunciations_dict: dict) -> int:
@@ -245,120 +250,6 @@ def hyphenate_word(
         return full_word
 
 
-get_word_options_general_rules = {
-    "'d": " would",
-    "'ll": " will",
-    "'re": " are",
-    "'ve": " have",
-    "n't": " not",
-    "'s": " is",
-    "'m": " am",
-    "y'all": " you all",
-}
-get_word_options_specific_cases = {
-    "boutta": ("about to",),
-    "aboutta": ("about to",),
-    "ain't": ("am not", "is not", "are not", "has not", "have not"),
-    "can't": ("cannot",),
-    "he'd": ("he would", "he had"),
-    "he's": ("he is", "he has"),
-    "i'd": ("i would", "i had"),
-    "it's": ("it is", "it has"),
-    "let's": ("let us",),
-    "shan't": ("shall not",),
-    "she'd": ("she would", "she had"),
-    "she's": ("she is", "she has"),
-    "that's": ("that is", "that has"),
-    "there's": ("there is", "there has"),
-    "they'd": ("they would", "they had"),
-    "we'd": ("we would", "we had"),
-    "what's": ("what is", "what has"),
-    "where's": ("where is", "where has"),
-    "who'd": ("who would", "who had"),
-    "who's": ("who is", "who has"),
-    "won't": ("will not",),
-    "you'd": ("you would", "you had"),
-    "gimme": ("give me",),
-    "gonna": ("going to",),
-    "wanna": ("want to",),
-    "gotta": ("got to",),
-    "hafta": ("have to",),
-    "dunno": ("don't know",),
-    "lemme": ("let me",),
-    "kinda": ("kind of",),
-    "sorta": ("sort of",),
-    "outta": ("out of",),
-    "c'mon": ("come on",),
-    "shoulda": ("should have",),
-    "coulda": ("could have",),
-    "woulda": ("would have",),
-    "musta": ("must have",),
-    "mighta": ("might have",),
-    "shouldna": ("should not have",),
-    "couldna": ("could not have",),
-    "wouldna": ("would not have",),
-    "whatcha": ("what are you", "what have you"),
-    "betcha": ("bet you",),
-    "gotcha": ("got you",),
-    "dontcha": ("don't you",),
-    "didntcha": ("didn't you",),
-    "wontcha": ("won't you",),
-    "need'a": ("need to",),
-    "oughta": ("ought to",),
-    "supposta": ("supposed to",),
-    "useta": ("used to",),
-    "lotta": ("lot of",),
-    "cuppa": ("cup of",),
-    "s'more": ("some more",),
-    "tellem": ("tell them",),
-    "i'mma": ("i'm going to",),
-    "y'all": ("you all",),
-    "y'all'd've": ("you all would have",),
-    "amn't": ("am not",),
-    "'tis": ("it is",),
-    "'twas": ("it was",),
-    "o'er": ("over",),
-    "ne'er": ("never",),
-    "e'er": ("ever",),
-    "e'en": ("even",),
-}
-
-# TODO: deprecate. Not sure that this will ever get used vs. just using WordsSyllables("string")
-# def get_word_options(word: str) -> tuple[str, ...]:
-#     """Expands contractions and common slang in a given word.
-
-#     This function takes a word and returns a tuple of possible
-#     expansions. It handles common English contractions and some informal
-#     slang words.
-
-#     Input:
-#         - clean_word: A single word, without spaces.
-#             - e.g. "y'all'd"
-
-#     Output:
-#         - A tuple[str, ...] containing the original word and its possible
-#         expansions.
-#             - e.g. "you all would"
-#     """
-#     clean_word = word.lower()
-#     word_options = set((clean_word,))
-#     word_options.update(
-#         get_word_options_specific_cases.get(
-#             clean_word,
-#             get_word_options_specific_cases.get(
-#                 clean_word.replace("'", ""),
-#                 (),
-#             ),
-#         )
-#     )
-
-#     for ending, changed_ending in get_word_options_general_rules.items():
-#         word_options_tuple = tuple(word_options)
-#         for word_option in word_options_tuple:
-#             word_options.add(word_option.replace(ending, changed_ending).strip())
-#     return tuple(word_options)
-
-
 def get_fuzzy_matches(
     search_syllables_str: str, kjv_syllables_str: str, score_cutoff: float
 ) -> list[tuple[str, float, int]]:
@@ -397,3 +288,20 @@ def get_fuzzy_matches(
         score_cutoff=score_cutoff,
     )
     return result
+
+
+def text_to_syllables(text: str) -> list[str]:
+    clean_text = get_clean_text(text)
+    words = clean_text.split()
+    syllables = []
+    for word in words:
+        word_syllable_count = get_syllable_count(word)
+        word_hyphenated = hyphenate_word(word, word_syllable_count)
+        word_syllables = word_hyphenated.split("-")
+        for i, word in enumerate(word_syllables):
+            word_syllables[i] = word + "-"
+        word_syllables[len(word_syllables) - 1] = word_syllables[
+            len(word_syllables) - 1
+        ][:-1]
+        syllables.extend(word_syllables)
+    return syllables
