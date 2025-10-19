@@ -1,0 +1,51 @@
+/* General body styling for better presentation */
+body {
+  font-family: sans-serif;
+  padding: 1em;
+  line-height: 1.6;
+}
+
+/* Styling for each individual search result item */
+.result-item {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: #f9f9f9;
+}
+
+/* Main container for a single line of lyrics, using CSS Grid */
+.lyric-sentence-container {
+  display: grid;
+  /* The number of columns is set dynamically via JavaScript using the --word-count variable */
+  grid-template-columns: repeat(var(--word-count, auto), auto);
+  justify-content: start; /* Align words to the start */
+  gap: 15px; /* Spacing between word pairs */
+  margin-top: 10px;
+  overflow-x: auto; /* Allows horizontal scrolling if sentence is too long */
+  padding-bottom: 10px;
+}
+
+/* Container for a pair of words (original and substituted) */
+.word-pair-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the words horizontally within their column */
+  text-align: center;
+}
+
+/* Styling for original and substituted words */
+.original-word,
+.substituted-word {
+  padding: 5px;
+  display: block;
+}
+
+.original-word {
+  font-weight: bold;
+  color: #333;
+}
+
+.substituted-word {
+  color: #0056b3;
+}

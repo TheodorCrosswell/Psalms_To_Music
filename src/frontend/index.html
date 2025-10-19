@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+    <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Psalms to Music</title>
   </head>
@@ -19,17 +20,22 @@
       <label for="bible">Bible</label>
       <input type="radio" id="hymns" name="searchType" value="Hymns" />
       <label for="hymns">Hymns</label>
-      <input type="radio" id="songs" name="searchType" value="Songs" />
-      <label for="songs">Songs</label>
+      <input
+        type="radio"
+        id="bible-songs"
+        name="searchType"
+        value="Bible Songs"
+      />
+      <label for="songs">Bible Songs</label>
+      <br />
+      <input type="text" id="searchText" placeholder="Enter search term" />
       <br />
       <button id="searchButton">Search</button>
       <button id="clearButton">Clear</button>
-      <br />
-      <input type="text" id="searchText" placeholder="Enter search term" />
       <div id="results">
         <p>Results will appear here.</p>
       </div>
     </div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/index.ts"></script>
   </body>
 </html>

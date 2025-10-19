@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, RootModel
 from helpers import (
     get_syllable_count,
@@ -7,7 +8,6 @@ from helpers import (
     get_clean_text,
     get_words,
 )
-from __future__ import annotations
 
 
 get_word_options_general_rules = {
